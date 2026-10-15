@@ -144,6 +144,53 @@ test('failure keeps previews concealed, allows revealing, and recovers on retry'
   );
 });
 
+test('clearing corrections reapplies cached scores in both directions', async ({
+  page,
+}) => {
+  await openFixture(page);
+  await expect(page.locator('#doom-card')).toHaveAttribute(
+    'data-db-state',
+    'blocked',
+  );
+  await expect(page.locator('#history-card')).toHaveAttribute(
+    'data-db-state',
+    'allowed',
+  );
+  const before = await page.evaluate(
+    () => window.doomblockFixture.calls.length,
+  );
+  await page
+    .locator('#doom-card')
+    .getByRole('button', { name: 'Show video', exact: true })
+    .click();
+  await expect(page.locator('#doom-card')).toHaveAttribute(
+    'data-db-state',
+    'allowed',
+  );
+  await page
+    .locator('#history-card')
+    .getByRole('button', { name: 'Hide with Doomblock' })
+    .click();
+  await expect(page.locator('#history-card')).toHaveAttribute(
+    'data-db-state',
+    'blocked',
+  );
+  await page.evaluate(() =>
+    window.doomblockFixture.setSettings({ overrides: {} }),
+  );
+  await expect(page.locator('#doom-card')).toHaveAttribute(
+    'data-db-state',
+    'blocked',
+  );
+  await expect(page.locator('#history-card')).toHaveAttribute(
+    'data-db-state',
+    'allowed',
+  );
+  expect(await page.evaluate(() => window.doomblockFixture.calls.length)).toBe(
+    before,
+  );
+});
+
 test('sensitivity uses existing scores without reclassification and dispose restores DOM', async ({
   page,
 }) => {

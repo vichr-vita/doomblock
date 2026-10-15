@@ -135,7 +135,6 @@ export async function startContent(bridge: ContentBridge) {
         button('Hide with Doomblock', async () => {
           await bridge.override(entry.video, 'block');
           entry.revealed = false;
-          entry.classification = { status: 'blocked' };
           state = await bridge.getState();
           render(entry);
         }),
@@ -170,6 +169,7 @@ export async function startContent(bridge: ContentBridge) {
           render(entry);
           await bridge.override(entry.video, 'allow');
           state = await bridge.getState();
+          entry.revealed = false;
           render(entry);
         }),
       );
