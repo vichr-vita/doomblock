@@ -58,6 +58,9 @@ export const Settings = Schema.Struct({
   consent: Schema.Boolean,
   sensitivity: Sensitivity,
   filterHome: Schema.Boolean,
+  filterSubscriptions: Schema.Boolean.pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(true)),
+  ),
   filterSuggested: Schema.Boolean,
   concealPending: Schema.Boolean,
   hideTopics: preferences.pipe(
@@ -78,6 +81,7 @@ export const defaultSettings: Settings = {
   consent: false,
   sensitivity: 'balanced',
   filterHome: true,
+  filterSubscriptions: true,
   filterSuggested: true,
   concealPending: true,
   hideTopics: '',

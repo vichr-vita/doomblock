@@ -74,6 +74,122 @@ test('rechecks recycled cards and newly appended recommendations', async ({
   );
 });
 
+test('filters subscriptions independently and restores cards when switched off', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 1000 });
+  await openFixture(page, 'feed/subscriptions');
+  await expect(page.locator('#doom-card')).toHaveAttribute(
+    'data-db-state',
+    'blocked',
+  );
+  await page.evaluate(() =>
+    window.doomblockFixture.setSettings({ filterHome: false }),
+  );
+  await expect(page.locator('#history-card')).toHaveAttribute(
+    'data-db-state',
+    'allowed',
+  );
+  await expect(page.locator('#shorts-card')).not.toHaveAttribute(
+    'data-db-state',
+  );
+  await expect(page.locator('#sidebar-card')).not.toHaveAttribute(
+    'data-db-state',
+  );
+  await page.evaluate(() => {
+    const copy = document
+      .querySelector('#doom-card')!
+      .cloneNode(true) as HTMLElement;
+    copy.id = 'subscription-card';
+    copy.querySelector('[data-db-ui]')?.remove();
+    copy.querySelector('a')!.href =
+      'https://www.youtube.com/watch?v=newvideo001';
+    copy.querySelector('h3')!.textContent = 'FINISHED'.repeat(60);
+    copy.querySelector('a[href*="/@"]')!.textContent = 'LongChannelName'.repeat(
+      40,
+    );
+    document.querySelector('#contents')!.append(copy);
+  });
+  await expect(page.locator('#subscription-card')).toHaveAttribute(
+    'data-db-state',
+    'blocked',
+  );
+  expect(
+    await page.evaluate(() => {
+      const card = document.querySelector('#subscription-card')!;
+      const controls = card
+        .querySelector('[data-db-ui]')!
+        .shadowRoot!.querySelectorAll('button');
+      return (
+        document.documentElement.scrollWidth <= innerWidth &&
+        [...controls].every((control) => {
+          const box = control.getBoundingClientRect();
+          return (
+            box.left >= 0 &&
+            box.right <= innerWidth &&
+            control.scrollWidth <= control.clientWidth
+          );
+        })
+      );
+    }),
+  ).toBe(true);
+  await page.evaluate(() =>
+    window.doomblockFixture.setSettings({ filterSubscriptions: false }),
+  );
+  await expect(page.locator('[data-db-ui]')).toHaveCount(0);
+  await expect(page.locator('#doom-card .preview')).toBeVisible();
+  await page.evaluate(() =>
+    window.doomblockFixture.navigate('/watch?v=playing0001'),
+  );
+  await expect(page.locator('#sidebar-card')).toHaveAttribute(
+    'data-db-state',
+    'blocked',
+  );
+  await expect(page.locator('#doom-card')).not.toHaveAttribute('data-db-state');
+});
+
+for (const renderer of ['ytd-grid-video-renderer', 'ytd-video-renderer']) {
+  test(`filters the subscriptions ${renderer} layout after SPA navigation`, async ({
+    page,
+  }) => {
+    await openFixture(page);
+    await page.evaluate((tag) => {
+      window.doomblockFixture.navigate('/feed/subscriptions');
+      const grid = document.querySelector('ytd-rich-grid-renderer')!;
+      const list = document.createElement('ytd-section-list-renderer');
+      list.append(...grid.childNodes);
+      grid.replaceWith(list);
+      for (const card of list.querySelectorAll('ytd-rich-item-renderer')) {
+        const replacement = document.createElement(tag);
+        replacement.id = card.id;
+        card.querySelector('[data-db-ui]')?.remove();
+        replacement.append(...card.childNodes);
+        card.replaceWith(replacement);
+      }
+    }, renderer);
+    await expect(page.locator('#doom-card')).toHaveAttribute(
+      'data-db-state',
+      'blocked',
+    );
+    await expect(page.locator('#history-card')).toHaveAttribute(
+      'data-db-state',
+      'allowed',
+    );
+    await expect(page.locator('#history-card [data-db-ui]')).toHaveCount(1);
+    await expect(page.locator('#shorts-card')).not.toHaveAttribute(
+      'data-db-state',
+    );
+    await page.evaluate(() => {
+      document.querySelector('#doom-card #video-title')!.textContent =
+        'The engineering behind nuclear reactors';
+    });
+    await expect(page.locator('#doom-card')).toHaveAttribute(
+      'data-db-state',
+      'allowed',
+    );
+  });
+}
+
 test('SPA navigation restores search and limits watch filtering to the sidebar', async ({
   page,
 }) => {

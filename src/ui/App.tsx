@@ -519,12 +519,17 @@ function SettingsPage({ state, save, bridge, onError }: PanelProps) {
             onChange={(filterHome) => change({ filterHome })}
           />
           <Checkbox
+            label="YouTube Subscriptions"
+            checked={draft.filterSubscriptions}
+            onChange={(filterSubscriptions) => change({ filterSubscriptions })}
+          />
+          <Checkbox
             label="Suggested videos beside the player"
             checked={draft.filterSuggested}
             onChange={(filterSuggested) => change({ filterSuggested })}
           />
           <p className="hint">
-            Search results, subscriptions, channels, and Shorts stay unfiltered.
+            Search results, channels, and Shorts stay unfiltered.
           </p>
         </section>
         <section className="section">

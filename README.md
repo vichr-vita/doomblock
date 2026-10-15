@@ -13,13 +13,13 @@ The initial build is unsigned. You can load it temporarily for personal testing.
 3. Select **Load Temporary Add-on** and choose the extracted `manifest.json`. For a source build, choose `.output/firefox-mv3/manifest.json`.
 4. Open Doomblock from the browser's extensions menu, then select **Settings**.
 5. Paste your [TypeSafe API key](https://console.typesafe.ai), accept the title and channel transmission disclosure, select **Enable filtering**, and save.
-6. Open YouTube Home, or reload an existing YouTube tab.
+6. Open YouTube Home, Subscriptions, or a video page, or reload an existing YouTube tab.
 
 Temporary add-ons unload when the browser restarts. A persistent install requires a [Mozilla-signed build](https://extensionworkshop.com/documentation/publish/signing-and-distribution-overview/). Signing can use Mozilla's unlisted distribution channel without a public store listing.
 
 ## Use the filter
 
-- **Home and suggested videos:** Doomblock checks regular video cards, including cards added during scrolling. Search results, subscriptions, channel pages, and Shorts stay unfiltered.
+- **Home, Subscriptions, and suggested videos:** Doomblock checks regular video cards, including cards added during scrolling and recommendations beside the video player. Each page type has its own switch under **Where to filter** in Settings, enabled by default. Search results, channel pages, and Shorts stay unfiltered.
 - **Your filters:** In Settings, enter topics or styles under **Hide videos about**, one preference per line. For example, `Celebrity gossip` or `Crypto price predictions`. Add **Keep exceptions**, such as `Historical documentaries`, to allow matches even when a hide topic or built-in filter matches. You can switch each built-in filter off separately. Save to apply changes to open YouTube tabs. **Reset filters** clears both fields and restores all built-in filters when you save.
 - **Sensitivity:** Gentle blocks scores of at least 0.94, Balanced at least 0.85, and Strict at least 0.70 in any category. Scores come from the model. These initial thresholds are not calibrated accuracy guarantees.
 - **Show video:** Reveal a hidden or unchecked card and save an allow correction for that video.
