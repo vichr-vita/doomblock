@@ -1,0 +1,47 @@
+{
+  "name": "doomblock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A self-contained YouTube negative engagement filter for Firefox and Zen.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@12.5.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "wxt -b firefox --mv3",
+    "build": "wxt build -b firefox --mv3",
+    "build:chrome": "wxt build -b chrome --mv3",
+    "zip": "wxt zip -b firefox --mv3",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "preview:ui": "vite --config vite.preview.config.ts --host 127.0.0.1",
+    "lint:extension": "web-ext lint --source-dir .output/firefox-mv3",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "postinstall": "wxt prepare"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@wxt-dev/module-react": "^1.2.2",
+    "prettier": "^3.9.10",
+    "sharp": "^0.35.5",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4",
+    "web-ext": "^10.7.0",
+    "wxt": "0.21.4"
+  },
+  "dependencies": {
+    "effect": "4.0.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}

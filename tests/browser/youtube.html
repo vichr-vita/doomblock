@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>YouTube card fixture</title>
+    <style>
+      body {
+        margin: 16px;
+        background: #000;
+        color: #fff;
+        font: 14px system-ui;
+      }
+      #contents {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+        gap: 16px;
+      }
+      ytd-rich-item-renderer,
+      ytd-compact-video-renderer,
+      yt-lockup-view-model {
+        display: block;
+        min-width: 0;
+      }
+      a {
+        color: #fff;
+        overflow-wrap: anywhere;
+      }
+      .preview {
+        background: #333;
+        min-height: 160px;
+      }
+      h3 {
+        font-size: 16px;
+      }
+      #related {
+        max-width: 400px;
+      }
+      .fixture-caption {
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="fixture-caption">Synthetic cards for integration tests</p>
+    <ytd-rich-grid-renderer
+      ><div id="contents">
+        <ytd-rich-item-renderer id="doom-card"
+          ><div class="preview">
+            <a href="https://www.youtube.com/watch?v=abcdefghijk"
+              ><h3 id="video-title">EUROPE IS FINISHED. Here's why.</h3></a
+            ><a href="https://www.youtube.com/@example">Example channel</a>
+          </div></ytd-rich-item-renderer
+        >
+        <ytd-rich-item-renderer id="history-card"
+          ><yt-lockup-view-model
+            ><div class="preview">
+              <h3 class="yt-lockup-metadata-view-model__title">
+                <a href="https://www.youtube.com/watch?v=history0001"
+                  >How the Roman Empire collapsed</a
+                >
+              </h3>
+              <a href="https://www.youtube.com/@history">History channel</a>
+            </div></yt-lockup-view-model
+          ></ytd-rich-item-renderer
+        >
+        <ytd-rich-item-renderer id="shorts-card"
+          ><div class="preview">
+            <a href="https://www.youtube.com/shorts/shorts00001">A Short</a>
+          </div></ytd-rich-item-renderer
+        >
+      </div></ytd-rich-grid-renderer
+    >
+    <div id="related">
+      <ytd-compact-video-renderer id="sidebar-card"
+        ><div class="preview">
+          <a id="video-title" href="https://www.youtube.com/watch?v=sidebar0001"
+            >EVERYTHING IS FINISHED</a
+          ><a href="https://www.youtube.com/@sidebar">Sidebar channel</a>
+        </div></ytd-compact-video-renderer
+      >
+    </div>
+    <script type="module" src="/tests/browser/youtube.ts"></script>
+  </body>
+</html>
