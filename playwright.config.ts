@@ -15,12 +15,12 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: '**/extension.spec.ts',
+      testIgnore: '**/*extension.spec.ts',
       use: { ...devices['Desktop Chrome'] },
     },
     {
       name: 'firefox',
-      testIgnore: '**/extension.spec.ts',
+      testIgnore: '**/*extension.spec.ts',
       use: {
         ...devices['Desktop Firefox'],
         launchOptions: {
@@ -30,13 +30,18 @@ export default defineConfig({
     },
     {
       name: 'webkit',
-      testIgnore: '**/extension.spec.ts',
+      testIgnore: '**/*extension.spec.ts',
       use: { ...devices['Desktop Safari'] },
     },
     {
       name: 'extension-firefox',
       testMatch: '**/extension.spec.ts',
       use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'extension-chromium',
+      testMatch: '**/chrome-extension.spec.ts',
+      use: { ...devices['Desktop Chrome'] },
     },
   ],
 });
