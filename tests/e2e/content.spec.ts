@@ -25,6 +25,16 @@ test('filters Home, handles both card layouts, and leaves Shorts alone', async (
     'allowed',
   );
   await expect(page.locator('#doom-card .preview')).toBeHidden();
+  await expect(
+    page
+      .locator('#doom-card')
+      .getByText('Doomblock hid a video', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .locator('#doom-card')
+      .getByText('Reason: Doomer framing', { exact: true }),
+  ).toBeVisible();
   await expect(page.locator('#shorts-card .preview')).toBeVisible();
   expect(await page.locator('#history-card [data-db-ui]').count()).toBe(1);
   await page
@@ -291,6 +301,11 @@ test('clearing corrections reapplies cached scores in both directions', async ({
     'data-db-state',
     'blocked',
   );
+  await expect(
+    page
+      .locator('#history-card')
+      .getByText('Reason: Hidden by you', { exact: true }),
+  ).toBeVisible();
   await page.evaluate(() =>
     window.doomblockFixture.setSettings({ overrides: {} }),
   );
@@ -305,6 +320,64 @@ test('clearing corrections reapplies cached scores in both directions', async ({
   expect(await page.evaluate(() => window.doomblockFixture.calls.length)).toBe(
     before,
   );
+});
+
+test('names only matching custom filters and reuses their scores for sensitivity changes', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 1000 });
+  await openFixture(page);
+  const longFilter = 'Roman'.repeat(80);
+  await page.evaluate((filter) => {
+    document.querySelector('#history-card h3 a')!.textContent =
+      `How ${filter} and the Roman Empire collapsed`;
+    window.doomblockFixture.setSettings({
+      hideTopics: `Gossip\n${filter}\nRoman Empire\n\n${filter}`,
+    });
+  }, longFilter);
+  const card = page.locator('#history-card');
+  await expect(card).toHaveAttribute('data-db-state', 'blocked');
+  await expect(
+    card.getByText(`Reason: Matched filters "${longFilter}", "Roman Empire"`, {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(card.getByText('Gossip', { exact: false })).toHaveCount(0);
+  await expect(card.locator('.preview')).toBeHidden();
+  expect(
+    await page.evaluate(() => {
+      const root = document.querySelector(
+        '#history-card [data-db-ui]',
+      )!.shadowRoot!;
+      return (
+        document.documentElement.scrollWidth <= innerWidth &&
+        [...root.querySelectorAll('p, button')].every((element) => {
+          const box = element.getBoundingClientRect();
+          return (
+            box.left >= 0 &&
+            box.right <= innerWidth &&
+            element.scrollWidth <= element.clientWidth + 1
+          );
+        })
+      );
+    }),
+  ).toBe(true);
+  const before = await page.evaluate(
+    () => window.doomblockFixture.calls.length,
+  );
+  await page.evaluate(() =>
+    window.doomblockFixture.setSettings({ sensitivity: 'gentle' }),
+  );
+  await expect(
+    card.getByText(`Reason: Matched filters "${longFilter}", "Roman Empire"`, {
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => window.doomblockFixture.calls.length)).toBe(
+    before,
+  );
+  await card.getByRole('button', { name: 'Show video', exact: true }).click();
+  await expect(card.locator('.preview')).toBeVisible();
 });
 
 test('sensitivity uses existing scores without reclassification and dispose restores DOM', async ({
@@ -347,7 +420,7 @@ test('custom preferences recheck open cards and keep exceptions override hide ma
   await expect(
     page
       .locator('#history-card')
-      .getByText('Doomblock hid a video · Your filters'),
+      .getByText('Reason: Matched filter "Roman"', { exact: true }),
   ).toBeVisible();
   await page.evaluate(() =>
     window.doomblockFixture.setSettings({ keepTopics: 'History' }),

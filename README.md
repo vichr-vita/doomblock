@@ -25,6 +25,7 @@ Temporary add-ons unload when the browser restarts. A persistent install require
 - **Show video:** Reveal a hidden or unchecked card and save an allow correction for that video.
 - **Always allow channel:** Allow future recommendations with the same channel link. Explicit video corrections take priority.
 - **Hide with Doomblock:** Hide an allowed video and remember your correction.
+- **Hide reasons:** Hidden cards show the blocking category or **Hidden by you** for a manual hide. Custom matches name the filters that crossed your sensitivity threshold. Each nonempty line under **Hide videos about** is scored separately, and all qualifying matches appear in the reason.
 - **Review hidden:** Open the popup's list of hidden videos. Titles stay concealed until you select **Inspect title**.
 - **Pause:** Switch filtering off in the popup to restore cards immediately.
 
@@ -37,6 +38,8 @@ Keep exceptions use the same sensitivity threshold as hide matches. Explicit vid
 ## Privacy and costs
 
 Classification sends a video's **title and channel name**, along with any **custom filter preferences**, directly to `https://api.typesafe.ai/v1/systemone`, authenticated with your key. It does not send video IDs, thumbnails, YouTube cookies, your search terms, or watch history. TypeSafe bills usage to your account.
+
+Each distinct custom hide filter adds one question to the classification request. More filters can increase API costs. This update refreshes cached classifications so existing videos can show their matching filters.
 
 Your API key is stored in extension-local browser storage without encryption. It is never included in the source, sent to a developer service, or returned to the content script. The extension has no analytics. See [PRIVACY.md](PRIVACY.md) for permissions and data retention.
 

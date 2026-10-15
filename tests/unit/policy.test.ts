@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { blockReason, isFilteredPage, localDecision } from '../../src/policy';
+import {
+  blockReason,
+  isFilteredPage,
+  localDecision,
+  matchingHideFilters,
+} from '../../src/policy';
 import { defaultSettings, categories } from '../../src/model';
 
 const settings = { ...defaultSettings, enabled: true, consent: true };
@@ -72,6 +77,37 @@ describe('negative engagement policy', () => {
     expect(blockReason(scores, preferences)).toBe('custom');
     expect(
       blockReason(scores, { ...preferences, sensitivity: 'gentle' }),
+    ).toBeUndefined();
+  });
+  it('names every qualifying custom filter at the same sensitivity as the hide decision', () => {
+    const scores = {
+      doom: 0.1,
+      outrage: 0.1,
+      curiosity: 0.1,
+      clickbait: 0.1,
+      customHide: 0.94,
+      customHideScores: [0.69, 0.7, 0.85, 0.94],
+    };
+    const preferences = {
+      ...settings,
+      hideTopics: 'Gossip\nCrypto\nAI\nPolitics',
+    };
+    expect(matchingHideFilters(scores, preferences)).toEqual([
+      'AI',
+      'Politics',
+    ]);
+    expect(
+      matchingHideFilters(scores, { ...preferences, sensitivity: 'gentle' }),
+    ).toEqual(['Politics']);
+    expect(
+      matchingHideFilters(scores, { ...preferences, sensitivity: 'strict' }),
+    ).toEqual(['Crypto', 'AI', 'Politics']);
+    expect(blockReason(scores, preferences)).toBe('custom');
+    expect(
+      blockReason(
+        { ...scores, customKeep: 0.98 },
+        { ...preferences, keepTopics: 'History' },
+      ),
     ).toBeUndefined();
   });
   it.each(categories)(

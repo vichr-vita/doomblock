@@ -10,6 +10,27 @@ const thresholds = { gentle: 0.94, balanced: 0.85, strict: 0.7 } as const;
 
 export type Preferences = Pick<Settings, 'hideTopics' | 'keepTopics'>;
 
+/** Each nonempty line is a separate custom hide filter, in scoring order. */
+export function hideFilters(preferences: Pick<Settings, 'hideTopics'>) {
+  return [
+    ...new Set(
+      preferences.hideTopics
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+/** Names the custom filters that crossed the current sensitivity threshold. */
+export function matchingHideFilters(scores: Scores, settings: Settings) {
+  return hideFilters(settings).filter(
+    (_, index) =>
+      (scores.customHideScores?.[index] ?? 0) >=
+      thresholds[settings.sensitivity],
+  );
+}
+
 /** Only changes to classification instructions require fresh scores. */
 export function preferencesKey(settings: Preferences): string {
   return JSON.stringify([

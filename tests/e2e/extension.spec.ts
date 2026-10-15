@@ -24,7 +24,7 @@ test('packaged Firefox scripts filter subscriptions, cache, and persist correcti
       ...defaultSettings,
       enabled: true,
       consent: true,
-      hideTopics: 'Roman Empire',
+      hideTopics: 'FINISHED\nRoman Empire',
       keepTopics: 'History',
     },
     apiKey: 'fixture-only-key',
@@ -40,12 +40,13 @@ test('packaged Firefox scripts filter subscriptions, cache, and persist correcti
       const request = JSON.parse(options.body);
       if (Object.keys(request.state).sort().join(',') !== 'channel,title') throw new Error('Unexpected transmitted fields');
       if (options.headers.Authorization !== 'Bearer fixture-only-key') throw new Error('API key not applied');
-      if (!request.questions.customHide.criteria.true.includes('Roman Empire') || !request.questions.customKeep.criteria.true.includes('History')) throw new Error('Preferences not transmitted');
+      if (!request.questions.customHide.criteria.true.includes('FINISHED') || !request.questions.customHide_1.criteria.true.includes('Roman Empire') || !request.questions.customKeep.criteria.true.includes('History')) throw new Error('Preferences not transmitted');
       const doom = request.state.title.includes('FINISHED') ? 0.97 : 0.1;
       return Response.json({ model: 'jev-1.13.0', answers: {
         doom: { type: 'noul', noul: doom }, outrage: { type: 'noul', noul: 0.1 },
         curiosity: { type: 'noul', noul: 0.1 }, clickbait: { type: 'noul', noul: 0.1 },
-        customHide: { type: 'noul', noul: 0.98 },
+        customHide: { type: 'noul', noul: doom },
+        customHide_1: { type: 'noul', noul: request.state.title.includes('Roman') ? 0.98 : 0.1 },
         customKeep: { type: 'noul', noul: request.state.channel.includes('History') ? 0.98 : 0.1 }
       } });
     };
@@ -116,6 +117,11 @@ test('packaged Firefox scripts filter subscriptions, cache, and persist correcti
       'data-db-state',
       'allowed',
     );
+    await expect(
+      youtube
+        .locator('#doom-card')
+        .getByText('Reason: Matched filter "FINISHED"', { exact: true }),
+    ).toBeVisible();
     await youtube.goto('https://www.youtube.com/feed/subscriptions');
     await expect(youtube.locator('#doom-card')).toHaveAttribute(
       'data-db-state',
@@ -125,6 +131,11 @@ test('packaged Firefox scripts filter subscriptions, cache, and persist correcti
       'data-db-state',
       'allowed',
     );
+    await expect(
+      youtube
+        .locator('#doom-card')
+        .getByText('Reason: Matched filter "FINISHED"', { exact: true }),
+    ).toBeVisible();
     await youtube
       .locator('#doom-card')
       .getByRole('button', { name: 'Show video', exact: true })
