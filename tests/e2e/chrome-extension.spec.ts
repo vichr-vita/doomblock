@@ -8,6 +8,7 @@ import { defaultSettings } from '../../src/model';
 interface PopupLayout {
   width: number;
   scrollWidth: number;
+  popupWidth: number;
   ready: boolean;
   clipped: string[];
 }
@@ -40,6 +41,7 @@ async function popupLayout(cdp: CDPSession, sessionId: string) {
         expression: `({
           width: innerWidth,
           scrollWidth: document.documentElement.scrollWidth,
+          popupWidth: document.querySelector('.popup')?.getBoundingClientRect().width,
           ready: !!document.querySelector('.toggle'),
           clipped: [...document.querySelectorAll('h1, button, p, .row > span')]
             .filter(element => {
@@ -104,7 +106,11 @@ test('native Chrome popup opens at a readable width on every open', async () => 
       });
       await expect
         .poll(() => popupLayout(cdp, sessionId))
-        .toEqual({ width: 360, scrollWidth: 360, ready: true, clipped: [] });
+        .toMatchObject({ popupWidth: 360, ready: true, clipped: [] });
+      // Chrome can impose a wider native viewport on Linux.
+      const layout = await popupLayout(cdp, sessionId);
+      expect(layout.width).toBeGreaterThanOrEqual(360);
+      expect(layout.scrollWidth).toBeLessThanOrEqual(layout.width);
       await cdp.send('Target.closeTarget', { targetId: targetId! });
     }
   } finally {
