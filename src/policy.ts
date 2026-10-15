@@ -59,6 +59,7 @@ export function isFilteredPage(url: string, settings: Settings): boolean {
   const { pathname } = new URL(url);
   return (
     (pathname === '/' && settings.filterHome) ||
+    (pathname === '/feed/subscriptions' && settings.filterSubscriptions) ||
     (pathname === '/watch' && settings.filterSuggested)
   );
 }

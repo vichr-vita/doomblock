@@ -146,18 +146,29 @@ describe('negative engagement policy', () => {
       ),
     ).toBeUndefined();
   });
-  it.each([
-    '/results?search_query=crisis',
-    '/feed/subscriptions',
-    '/@history',
-    '/shorts/abcdefghijk',
-  ])('keeps intentional navigation unfiltered: %s', (path) => {
-    expect(isFilteredPage(`https://www.youtube.com${path}`, settings)).toBe(
-      false,
-    );
-  });
-  it('honors separate Home and Suggested switches', () => {
+  it.each(['/results?search_query=crisis', '/@history', '/shorts/abcdefghijk'])(
+    'keeps intentional navigation unfiltered: %s',
+    (path) => {
+      expect(isFilteredPage(`https://www.youtube.com${path}`, settings)).toBe(
+        false,
+      );
+    },
+  );
+  it('honors separate Home, Subscriptions, and Suggested switches', () => {
     expect(isFilteredPage('https://www.youtube.com/', settings)).toBe(true);
+    expect(
+      isFilteredPage('https://www.youtube.com/feed/subscriptions', {
+        ...settings,
+        filterHome: false,
+        filterSuggested: false,
+      }),
+    ).toBe(true);
+    expect(
+      isFilteredPage('https://www.youtube.com/feed/subscriptions', {
+        ...settings,
+        filterSubscriptions: false,
+      }),
+    ).toBe(false);
     expect(
       isFilteredPage('https://www.youtube.com/watch?v=abcdefghijk', settings),
     ).toBe(true);

@@ -51,10 +51,15 @@ export function readVideo(card: Element): Video | undefined {
 }
 
 export function videoCards(document: Document, url: string): Element[] {
-  const watchPage = new URL(url).pathname === '/watch';
-  return [...document.querySelectorAll(cardSelector)].filter((card) => {
-    if (card.parentElement?.closest(cardSelector)) return false;
-    if (watchPage)
+  const { pathname } = new URL(url);
+  // Subscriptions also has older grid and list layouts.
+  const selector =
+    pathname === '/feed/subscriptions'
+      ? `${cardSelector}, ytd-grid-video-renderer, ytd-video-renderer`
+      : cardSelector;
+  return [...document.querySelectorAll(selector)].filter((card) => {
+    if (card.parentElement?.closest(selector)) return false;
+    if (pathname === '/watch')
       return Boolean(
         card.closest('#related, ytd-watch-next-secondary-results-renderer'),
       );

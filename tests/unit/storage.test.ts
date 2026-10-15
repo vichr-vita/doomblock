@@ -112,6 +112,39 @@ describe('local data', () => {
       code: 'storage',
     });
   });
+  it('enables subscriptions for existing installations and preserves an explicit opt-out', async () => {
+    const { filterSubscriptions, ...legacy } = defaultSettings;
+    memory.data.config = {
+      settings: {
+        ...legacy,
+        filterHome: false,
+        filterSuggested: false,
+        hideTopics: 'Gossip',
+        overrides: { abcdefghijk: 'allow' },
+      },
+      apiKey: 'existing-key',
+    };
+    expect(await Effect.runPromise(readSettings)).toMatchObject({
+      apiKey: 'existing-key',
+      settings: {
+        ...legacy,
+        filterSubscriptions,
+        filterHome: false,
+        filterSuggested: false,
+        hideTopics: 'Gossip',
+        overrides: { abcdefghijk: 'allow' },
+      },
+    });
+    await Effect.runPromise(
+      updateSettings((settings) => ({
+        ...settings,
+        filterSubscriptions: false,
+      })),
+    );
+    expect(await Effect.runPromise(readSettings)).toMatchObject({
+      settings: { filterSubscriptions: false },
+    });
+  });
   it('serializes concurrent corrections and cache writes without losing entries', async () => {
     await Promise.all(
       ['first', 'second', 'third'].map((id) =>

@@ -74,6 +74,15 @@ for (const width of [320, 375, 768]) {
     await page
       .getByRole('checkbox', { name: 'YouTube Home', exact: true })
       .uncheck();
+    await expect(
+      page.getByRole('checkbox', {
+        name: 'YouTube Subscriptions',
+        exact: true,
+      }),
+    ).toBeChecked();
+    await page
+      .getByRole('checkbox', { name: 'YouTube Subscriptions', exact: true })
+      .uncheck();
     await page
       .getByRole('button', { name: 'Save settings', exact: true })
       .click();
@@ -87,6 +96,7 @@ for (const width of [320, 375, 768]) {
       keepTopics: 'Historical documentaries',
       builtInFilters: { outrage: false, doom: true },
       filterHome: false,
+      filterSubscriptions: false,
     });
     await page.getByRole('button', { name: 'Reset filters' }).click();
     await expect(page.getByLabel('Hide videos about')).toHaveValue('');

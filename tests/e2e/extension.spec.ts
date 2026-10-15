@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { defaultSettings } from '../../src/model';
 
-test('packaged Firefox scripts classify, cache, and persist corrections', async () => {
+test('packaged Firefox scripts filter subscriptions, cache, and persist corrections', async () => {
   test.setTimeout(60_000);
   const directory = await mkdtemp(path.join(tmpdir(), 'doomblock-extension-'));
   const extension = path.join(directory, 'addon');
@@ -116,7 +116,7 @@ test('packaged Firefox scripts classify, cache, and persist corrections', async 
       'data-db-state',
       'allowed',
     );
-    await youtube.reload();
+    await youtube.goto('https://www.youtube.com/feed/subscriptions');
     await expect(youtube.locator('#doom-card')).toHaveAttribute(
       'data-db-state',
       'blocked',
