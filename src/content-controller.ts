@@ -11,6 +11,7 @@ import {
   blockReason,
   isFilteredPage,
   localDecision,
+  matchingHideFilters,
   preferencesKey,
 } from './policy';
 import { readVideo, videoCards } from './youtube';
@@ -44,7 +45,7 @@ const pageCss = `
 `;
 const shadowCss = `
 :host{display:block;min-width:0;color:#fff;background:#000;font:13px/1.5 system-ui,sans-serif;color-scheme:dark;box-sizing:border-box}
-*{box-sizing:border-box}.placeholder{min-height:112px;padding:16px;border-top:1px solid #555;overflow-wrap:anywhere}.label{font-weight:650}p{margin:0 0 8px}button{font:inherit;color:#fff;background:#000;border:1px solid #777;padding:6px 9px;cursor:pointer;min-height:34px;max-width:100%;white-space:normal;overflow-wrap:anywhere}button:focus-visible{outline:2px solid #fff;outline-offset:3px}.actions{display:flex;gap:8px;flex-wrap:wrap}.allowed{padding:4px 0}.allowed button{border:0;font-size:11px;padding:2px 5px;min-height:26px;text-decoration:underline;text-underline-offset:3px}.error{margin-top:8px}.review-title{font-size:14px}
+*{box-sizing:border-box}.placeholder{min-height:112px;padding:16px;border-top:1px solid #555;overflow-wrap:anywhere}.label{font-weight:650}p{margin:0 0 8px}.reason{margin-bottom:12px}button{font:inherit;color:#fff;background:#000;border:1px solid #777;padding:6px 9px;cursor:pointer;min-height:34px;max-width:100%;white-space:normal;overflow-wrap:anywhere}button:focus-visible{outline:2px solid #fff;outline-offset:3px}.actions{display:flex;gap:8px;flex-wrap:wrap}.allowed{padding:4px 0}.allowed button{border:0;font-size:11px;padding:2px 5px;min-height:26px;text-decoration:underline;text-underline-offset:3px}.error{margin-top:8px}.review-title{font-size:14px}
 `;
 
 /** Owns card lifecycle and restores YouTube when paused, navigating, or disposed. */
@@ -153,8 +154,23 @@ export async function startContent(bridge: ContentBridge) {
           ? 'Checking video'
           : result.status === 'error'
             ? 'Video unchecked'
-            : `Doomblock hid a video${result.reason ? ` · ${reasonNames[result.reason]}` : ''}`;
+            : 'Doomblock hid a video';
       body.append(label);
+      if (result.status === 'blocked') {
+        const reason = document.createElement('p');
+        reason.className = 'reason';
+        const matches =
+          result.reason === 'custom' && result.scores
+            ? matchingHideFilters(result.scores, state.settings)
+            : [];
+        const explanation = matches.length
+          ? `Matched ${matches.length === 1 ? 'filter' : 'filters'} ${matches.map((filter) => `"${filter}"`).join(', ')}`
+          : result.reason
+            ? reasonNames[result.reason]
+            : 'Hidden by you';
+        reason.textContent = `Reason: ${explanation}`;
+        body.append(reason);
+      }
       if (entry.error && result.status === 'error') {
         const error = document.createElement('p');
         error.textContent = entry.error;

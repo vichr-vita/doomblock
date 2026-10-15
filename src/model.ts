@@ -50,6 +50,8 @@ export const Scores = Schema.Struct({
   curiosity: probability,
   clickbait: probability,
   customHide: Schema.optionalKey(probability),
+  // Per-filter scores follow hideFilters() order; customHide is their maximum.
+  customHideScores: Schema.optionalKey(Schema.Array(probability)),
   customKeep: Schema.optionalKey(probability),
 });
 export type Scores = typeof Scores.Type;

@@ -101,6 +101,80 @@ describe('TypeSafe client', () => {
       expect(fetcher).toHaveBeenCalledTimes(1);
     },
   );
+  it('scores each distinct hide filter separately and preserves their order', async () => {
+    const preferences = {
+      hideTopics:
+        ' Celebrity gossip\r\n\r\nCrypto predictions\nCelebrity gossip\nAI tutorials ',
+      keepTopics: '',
+    };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        ...response,
+        answers: {
+          ...response.answers,
+          customHide: { type: 'noul', noul: 0.1 },
+          customHide_1: { type: 'noul', noul: 0.98 },
+          customHide_2: { type: 'noul', noul: 0.9 },
+        },
+      }),
+    );
+    await expect(
+      Effect.runPromise(classifyVideo(video, 'key', preferences, fetcher)),
+    ).resolves.toMatchObject({
+      customHide: 0.98,
+      customHideScores: [0.1, 0.98, 0.9],
+    });
+    const body: unknown = JSON.parse(String(fetcher.mock.calls[0]![1]?.body));
+    expect(body).toMatchObject({
+      questions: {
+        customHide: {
+          criteria: { true: expect.stringContaining('"Celebrity gossip"') },
+        },
+        customHide_1: {
+          criteria: { true: expect.stringContaining('"Crypto predictions"') },
+        },
+        customHide_2: {
+          criteria: { true: expect.stringContaining('"AI tutorials"') },
+        },
+      },
+    });
+    expect(Object.keys((body as { questions: object }).questions)).toHaveLength(
+      7,
+    );
+  });
+  it.each([
+    undefined,
+    { type: 'noul', noul: 1.1 },
+    { type: 'noul', noul: '0.9' },
+  ])(
+    'rejects a missing or invalid per-filter score even when another filter matches',
+    async (secondAnswer) => {
+      const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+        Response.json({
+          ...response,
+          answers: {
+            ...response.answers,
+            customHide: { type: 'noul', noul: 0.98 },
+            ...(secondAnswer ? { customHide_1: secondAnswer } : {}),
+          },
+        }),
+      );
+      await expect(
+        Effect.runPromise(
+          classifyVideo(
+            video,
+            'key',
+            {
+              hideTopics: 'Gossip\nCrypto',
+              keepTopics: '',
+            },
+            fetcher,
+          ),
+        ),
+      ).rejects.toMatchObject({ code: 'invalid_response' });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    },
+  );
   it('invalidates cached scores when metadata changes', async () => {
     expect(await cacheKey(video)).not.toBe(
       await cacheKey({ ...video, title: 'A new title' }),

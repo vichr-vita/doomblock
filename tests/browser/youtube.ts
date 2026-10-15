@@ -7,6 +7,7 @@ import {
   type Settings,
 } from '../../src/model';
 import { Schema } from 'effect';
+import { hideFilters } from '../../src/policy';
 
 declare global {
   interface Window {
@@ -81,6 +82,7 @@ const stop = await startContent({
         .includes(preference.trim().toLowerCase())
         ? 0.98
         : 0.1;
+    const customHideScores = hideFilters(preferences).map(matches);
     return {
       status: 'scored',
       scores: {
@@ -88,8 +90,8 @@ const stop = await startContent({
         outrage: 0.1,
         curiosity: 0.1,
         clickbait: 0.2,
-        ...(preferences.hideTopics.trim()
-          ? { customHide: matches(preferences.hideTopics) }
+        ...(customHideScores.length
+          ? { customHide: Math.max(...customHideScores), customHideScores }
           : {}),
         ...(preferences.keepTopics.trim()
           ? { customKeep: matches(preferences.keepTopics) }
