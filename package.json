@@ -1,6 +1,6 @@
 {
   "name": "doomblock",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "A self-contained YouTube negative engagement filter for Firefox and Zen.",
   "license": "MIT",

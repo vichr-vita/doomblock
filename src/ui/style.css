@@ -74,7 +74,9 @@ span {
   overflow-wrap: anywhere;
 }
 .popup {
-  width: min(360px, 100vw);
+  /* Give browser popup autosizing an intrinsic width before a viewport exists. */
+  width: 360px;
+  max-width: 100%;
   padding: 18px;
 }
 .settings {
