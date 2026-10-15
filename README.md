@@ -1,6 +1,6 @@
 # Doomblock
 
-Doomblock filters YouTube recommendations that use fear, outrage, disturbing curiosity, or manipulative clickbait to attract attention. Serious criticism, negative facts, and uncomfortable subjects should remain visible.
+Doomblock filters YouTube recommendations that use fear, outrage, disturbing curiosity, or manipulative clickbait to attract attention. By default, serious criticism, negative facts, and uncomfortable subjects should remain visible. You can customize which topics and styles to hide or keep.
 
 It is a self-contained browser extension for Firefox 142+ and Firefox-based Zen. You supply a TypeSafe API key. The extension calls Jev directly, with no backend to run.
 
@@ -20,6 +20,7 @@ Temporary add-ons unload when the browser restarts. A persistent install require
 ## Use the filter
 
 - **Home and suggested videos:** Doomblock checks regular video cards, including cards added during scrolling. Search results, subscriptions, channel pages, and Shorts stay unfiltered.
+- **Your filters:** In Settings, enter topics or styles under **Hide videos about**, one preference per line. For example, `Celebrity gossip` or `Crypto price predictions`. Add **Keep exceptions**, such as `Historical documentaries`, to allow matches even when a hide topic or built-in filter matches. You can switch each built-in filter off separately. Save to apply changes to open YouTube tabs. **Reset filters** clears both fields and restores all built-in filters when you save.
 - **Sensitivity:** Gentle blocks scores of at least 0.94, Balanced at least 0.85, and Strict at least 0.70 in any category. Scores come from the model. These initial thresholds are not calibrated accuracy guarantees.
 - **Show video:** Reveal a hidden or unchecked card and save an allow correction for that video.
 - **Always allow channel:** Allow future recommendations with the same channel link. Explicit video corrections take priority.
@@ -31,9 +32,11 @@ The extension normally conceals previews until their scores arrive. If a request
 
 Only cards near the viewport generate new API requests. Up to three requests run concurrently. The extension retries temporary failures twice, then briefly pauses new requests after errors. Changing sensitivity reuses scores already in the cache.
 
+Keep exceptions use the same sensitivity threshold as hide matches. Explicit video corrections take priority, followed by allowed channels, keep exceptions, then hide rules. Preferences can describe topics as well as how titles attract attention. Decisions use only the title and channel name, so a preference that requires watching the video may not match. Each preference field allows up to 2,000 characters. Changing either field triggers fresh checks; switching built-in filters or sensitivity reuses existing scores. Existing installations retain their settings and start with empty preference fields and all built-in filters enabled.
+
 ## Privacy and costs
 
-Classification sends a video's **title and channel name** directly to `https://api.typesafe.ai/v1/systemone`, authenticated with your key. It does not send video IDs, thumbnails, YouTube cookies, your search terms, or watch history. TypeSafe bills usage to your account.
+Classification sends a video's **title and channel name**, along with any **custom filter preferences**, directly to `https://api.typesafe.ai/v1/systemone`, authenticated with your key. It does not send video IDs, thumbnails, YouTube cookies, your search terms, or watch history. TypeSafe bills usage to your account.
 
 Your API key is stored in extension-local browser storage without encryption. It is never included in the source, sent to a developer service, or returned to the content script. The extension has no analytics. See [PRIVACY.md](PRIVACY.md) for permissions and data retention.
 
@@ -85,7 +88,7 @@ WXT, Vite, strict TypeScript, React, Tailwind, and Effect 4. Effect handles API 
 - `entrypoints/background.ts` owns API credentials, request concurrency, and caching.
 - `src/ui` contains the compact popup and settings.
 
-Scores expire after seven days. The cache holds up to 500 videos, keyed by model, question version, and metadata. Corrections are local rules. They do not retrain Jev. Full descriptions and thumbnails are outside the initial version. YouTube can change its markup, and decisions based only on titles and channel names can be wrong.
+Scores expire after seven days. The cache holds up to 500 videos, keyed by model, question version, custom preferences, and metadata. Corrections are local rules. They do not retrain Jev. Full descriptions and thumbnails are outside the initial version. YouTube can change its markup, and decisions based only on titles and channel names can be wrong.
 
 Report bugs and proposed improvements in [GitHub Issues](https://github.com/vichr-vita/doomblock/issues). Include the page type and steps to reproduce; never include your API key.
 

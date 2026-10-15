@@ -1,4 +1,4 @@
-import { Schema } from 'effect';
+import { Effect, Schema } from 'effect';
 
 export const categories = [
   'doom',
@@ -10,9 +10,27 @@ export type Category = (typeof categories)[number];
 export const categoryNames: Record<Category, string> = {
   doom: 'Doomer framing',
   outrage: 'Outrage bait',
-  curiosity: 'Negative curiosity',
+  curiosity: 'Disturbing curiosity',
   clickbait: 'Manipulative clickbait',
 };
+export const reasonNames = {
+  ...categoryNames,
+  custom: 'Your filters',
+} as const;
+export const defaultFilters = {
+  doom: true,
+  outrage: true,
+  curiosity: true,
+  clickbait: true,
+} as const;
+export const PREFERENCE_LIMIT = 2000;
+const preferences = Schema.String.check(Schema.isMaxLength(PREFERENCE_LIMIT));
+const BuiltInFilters = Schema.Struct({
+  doom: Schema.Boolean,
+  outrage: Schema.Boolean,
+  curiosity: Schema.Boolean,
+  clickbait: Schema.Boolean,
+});
 export const Sensitivity = Schema.Literals(['gentle', 'balanced', 'strict']);
 export type Sensitivity = typeof Sensitivity.Type;
 const shortText = Schema.String.check(Schema.isMaxLength(500));
@@ -31,6 +49,8 @@ export const Scores = Schema.Struct({
   outrage: probability,
   curiosity: probability,
   clickbait: probability,
+  customHide: Schema.optionalKey(probability),
+  customKeep: Schema.optionalKey(probability),
 });
 export type Scores = typeof Scores.Type;
 export const Settings = Schema.Struct({
@@ -40,6 +60,15 @@ export const Settings = Schema.Struct({
   filterHome: Schema.Boolean,
   filterSuggested: Schema.Boolean,
   concealPending: Schema.Boolean,
+  hideTopics: preferences.pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed('')),
+  ),
+  keepTopics: preferences.pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed('')),
+  ),
+  builtInFilters: BuiltInFilters.pipe(
+    Schema.withDecodingDefaultKey(Effect.succeed(defaultFilters)),
+  ),
   allowedChannels: Schema.Record(Schema.String, Schema.String),
   overrides: Schema.Record(Schema.String, Schema.Literals(['allow', 'block'])),
 });
@@ -51,6 +80,9 @@ export const defaultSettings: Settings = {
   filterHome: true,
   filterSuggested: true,
   concealPending: true,
+  hideTopics: '',
+  keepTopics: '',
+  builtInFilters: defaultFilters,
   allowedChannels: {},
   overrides: {},
 };
@@ -128,7 +160,7 @@ export const errorMessages: Record<ErrorCode, string> = {
 export const PageItem = Schema.Struct({
   video: Video,
   status: Schema.Literals(['checking', 'allowed', 'blocked', 'error']),
-  reason: Schema.optionalKey(Schema.Literals(categories)),
+  reason: Schema.optionalKey(Schema.Literals([...categories, 'custom'])),
   scores: Schema.optionalKey(Scores),
   error: Schema.optionalKey(Schema.String),
 });

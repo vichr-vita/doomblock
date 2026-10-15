@@ -22,7 +22,8 @@ body {
   min-width: 0;
 }
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 button {
@@ -44,6 +45,7 @@ button:disabled {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
+textarea:focus-visible,
 summary:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 3px;
@@ -233,6 +235,21 @@ span {
   color: #fff;
   border: 1px solid #777;
   border-radius: 0;
+}
+textarea.field {
+  resize: vertical;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.filter-options {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  margin: 20px 0 0;
+}
+.filter-options legend {
+  padding: 0;
+  font-weight: 650;
 }
 .check-row {
   display: flex;

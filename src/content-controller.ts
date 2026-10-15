@@ -1,5 +1,5 @@
 import {
-  categoryNames,
+  reasonNames,
   type Classification,
   type PageItem,
   type PageState,
@@ -7,7 +7,12 @@ import {
   type Settings,
   type Video,
 } from './model';
-import { blockReason, isFilteredPage, localDecision } from './policy';
+import {
+  blockReason,
+  isFilteredPage,
+  localDecision,
+  preferencesKey,
+} from './policy';
 import { readVideo, videoCards } from './youtube';
 
 export type PageCommand = 'snapshot' | 'review' | 'retry' | 'showUnchecked';
@@ -68,7 +73,7 @@ export async function startContent(bridge: ContentBridge) {
     const classification = local ?? entry.classification;
     const reason =
       classification?.status === 'scored'
-        ? blockReason(classification.scores, state.settings.sensitivity)
+        ? blockReason(classification.scores, state.settings)
         : undefined;
     const blocked =
       !entry.revealed &&
@@ -115,6 +120,7 @@ export async function startContent(bridge: ContentBridge) {
   }
 
   function render(entry: Entry) {
+    if (entries.get(entry.card) !== entry) return;
     const result = item(entry);
     const conceal =
       result.status === 'blocked' ||
@@ -135,7 +141,7 @@ export async function startContent(bridge: ContentBridge) {
         button('Hide with Doomblock', async () => {
           await bridge.override(entry.video, 'block');
           entry.revealed = false;
-          state = await bridge.getState();
+          applyState(await bridge.getState());
           render(entry);
         }),
       );
@@ -147,7 +153,7 @@ export async function startContent(bridge: ContentBridge) {
           ? 'Checking video'
           : result.status === 'error'
             ? 'Video unchecked'
-            : `Doomblock hid a video${result.reason ? ` · ${categoryNames[result.reason]}` : ''}`;
+            : `Doomblock hid a video${result.reason ? ` · ${reasonNames[result.reason]}` : ''}`;
       body.append(label);
       if (entry.error && result.status === 'error') {
         const error = document.createElement('p');
@@ -168,7 +174,7 @@ export async function startContent(bridge: ContentBridge) {
           entry.revealed = true;
           render(entry);
           await bridge.override(entry.video, 'allow');
-          state = await bridge.getState();
+          applyState(await bridge.getState());
           entry.revealed = false;
           render(entry);
         }),
@@ -177,7 +183,7 @@ export async function startContent(bridge: ContentBridge) {
         actions.append(
           button('Always allow channel', async () => {
             await bridge.allowChannel(entry.video);
-            state = await bridge.getState();
+            applyState(await bridge.getState());
             for (const other of entries.values()) render(other);
           }),
         );
@@ -246,6 +252,17 @@ export async function startContent(bridge: ContentBridge) {
     entry.card.removeAttribute('data-db-state');
     entry.host.remove();
     entries.delete(entry.card);
+  }
+
+  function applyState(next: PublicState) {
+    if (disposed) return;
+    if (preferencesKey(state.settings) !== preferencesKey(next.settings)) {
+      // Recreate entries so in-flight results cannot apply an older preference.
+      for (const entry of entries.values()) remove(entry);
+      showUnchecked = false;
+    }
+    state = next;
+    scan();
   }
 
   function scan() {
@@ -318,16 +335,12 @@ export async function startContent(bridge: ContentBridge) {
     void bridge
       .getState()
       .then((next) => {
-        state = next;
-        if (!active()) {
-          scan();
-          return;
-        }
+        if (disposed) return;
+        applyState(next);
         for (const entry of entries.values()) {
           render(entry);
           if (!entry.error) void process(entry);
         }
-        scan();
       })
       .catch(() => {
         /* Preserve the last known policy if storage is temporarily unavailable. */

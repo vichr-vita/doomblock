@@ -7,7 +7,9 @@ async function expectNoOverflow(page: Page) {
     ),
   ).toBe(true);
   const clipped = await page
-    .locator('button, input, summary, .field, .review-item p, .list-row p')
+    .locator(
+      'button, input, textarea, summary, .field, .review-item p, .list-row p',
+    )
     .evaluateAll((elements) =>
       elements
         .filter((element) => {
@@ -59,7 +61,16 @@ for (const width of [320, 375, 768]) {
       page.getByRole('heading', { name: 'Allowed channels' }),
     ).toBeVisible();
     await page.getByLabel('Replace saved API key').fill('a'.repeat(300));
+    await expect(page.getByLabel('Hide videos about')).not.toHaveValue('');
+    await expect(page.getByLabel('Keep exceptions')).not.toHaveValue('');
     await expectNoOverflow(page);
+    await page
+      .getByLabel('Hide videos about')
+      .fill('Celebrity gossip\nCrypto price predictions');
+    await page.getByLabel('Keep exceptions').fill('Historical documentaries');
+    await page
+      .getByRole('checkbox', { name: 'Outrage bait', exact: true })
+      .uncheck();
     await page
       .getByRole('checkbox', { name: 'YouTube Home', exact: true })
       .uncheck();
@@ -67,8 +78,43 @@ for (const width of [320, 375, 768]) {
       .getByRole('button', { name: 'Save settings', exact: true })
       .click();
     await expect(page.getByRole('status')).toContainText('Settings saved');
+    expect(
+      await page.evaluate(() =>
+        JSON.parse(sessionStorage.getItem('saved-settings')!),
+      ),
+    ).toMatchObject({
+      hideTopics: 'Celebrity gossip\nCrypto price predictions',
+      keepTopics: 'Historical documentaries',
+      builtInFilters: { outrage: false, doom: true },
+      filterHome: false,
+    });
+    await page.getByRole('button', { name: 'Reset filters' }).click();
+    await expect(page.getByLabel('Hide videos about')).toHaveValue('');
+    await expect(page.getByLabel('Keep exceptions')).toHaveValue('');
+    await expect(
+      page.getByRole('checkbox', { name: 'Outrage bait', exact: true }),
+    ).toBeChecked();
+    await expect(
+      page.getByRole('checkbox', { name: 'YouTube Home', exact: true }),
+    ).not.toBeChecked();
+    await expectNoOverflow(page);
   });
 }
+
+test('popup links to filter settings and labels custom matches', async ({
+  page,
+}) => {
+  await page.goto('/tests/browser/ui.html');
+  await page.getByRole('button', { name: 'Review 2 hidden' }).click();
+  await expect(
+    page
+      .getByRole('region', { name: 'Hidden videos' })
+      .getByText('Your filters', { exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Edit your filters' }).click();
+  await expect(page).toHaveURL(/view=settings#filters$/);
+  await expect(page.getByLabel('Hide videos about')).toBeInViewport();
+});
 
 test('setup requires consent and a key before enabling', async ({ page }) => {
   await page.goto('/tests/browser/ui.html?view=settings&setup');

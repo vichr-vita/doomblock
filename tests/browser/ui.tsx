@@ -16,6 +16,8 @@ let state: PublicState = {
     ...defaultSettings,
     enabled: !setup,
     consent: !setup,
+    hideTopics: setup ? '' : 'CelebrityGossip'.repeat(120),
+    keepTopics: setup ? '' : 'HistoricalDocumentaries'.repeat(80),
     allowedChannels: setup
       ? {}
       : { [channelId]: 'LongUnbrokenChannelName'.repeat(18) },
@@ -39,7 +41,7 @@ let page: PageState = {
         channelId: '/@another',
       },
       status: 'blocked',
-      reason: 'outrage',
+      reason: 'custom',
     },
     ...(params.has('error')
       ? [
@@ -63,6 +65,7 @@ const bridge: UiBridge = {
       settings,
       hasKey: apiKey === undefined ? state.hasKey : apiKey.length > 0,
     };
+    sessionStorage.setItem('saved-settings', JSON.stringify(settings));
     for (const listener of listeners) listener();
     return state;
   },
@@ -89,8 +92,8 @@ const bridge: UiBridge = {
     listeners.add(listener);
     return () => listeners.delete(listener);
   },
-  openSettings() {
-    location.href = '/tests/browser/ui.html?view=settings&setup';
+  openSettings(section) {
+    location.href = `/tests/browser/ui.html?view=settings${setup ? '&setup' : ''}${section ? `#${section}` : ''}`;
   },
 };
 createRoot(document.getElementById('root')!).render(

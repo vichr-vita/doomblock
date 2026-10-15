@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
 import { describe, expect, it, vi } from 'vitest';
 import { API_URL, MODEL, cacheKey, classifyVideo } from '../../src/classifier';
+import { defaultSettings } from '../../src/model';
 
 const video = {
   id: 'abcdefghijk',
@@ -24,7 +25,7 @@ describe('TypeSafe client', () => {
       .fn<typeof fetch>()
       .mockResolvedValue(Response.json(response));
     const scores = await Effect.runPromise(
-      classifyVideo(video, 'test-key', fetcher),
+      classifyVideo(video, 'test-key', defaultSettings, fetcher),
     );
     expect(scores.doom).toBe(0.96);
     const [url, options] = fetcher.mock.calls[0]!;
@@ -52,7 +53,7 @@ describe('TypeSafe client', () => {
         new Response('secret provider details', { status: 401 }),
       );
     const result = await Effect.runPromise(
-      classifyVideo(video, 'test-key', fetcher).pipe(
+      classifyVideo(video, 'test-key', defaultSettings, fetcher).pipe(
         Effect.match({
           onFailure: (error) => error.code,
           onSuccess: () => 'unexpected',
@@ -68,7 +69,7 @@ describe('TypeSafe client', () => {
       .mockResolvedValueOnce(new Response('', { status: 503 }))
       .mockResolvedValueOnce(Response.json(response));
     await expect(
-      Effect.runPromise(classifyVideo(video, 'key', fetcher)),
+      Effect.runPromise(classifyVideo(video, 'key', defaultSettings, fetcher)),
     ).resolves.toMatchObject({ doom: 0.96 });
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
@@ -89,7 +90,7 @@ describe('TypeSafe client', () => {
         .fn<typeof fetch>()
         .mockResolvedValue(Response.json(invalid));
       const result = await Effect.runPromise(
-        classifyVideo(video, 'key', fetcher).pipe(
+        classifyVideo(video, 'key', defaultSettings, fetcher).pipe(
           Effect.match({
             onFailure: (error) => error.code,
             onSuccess: () => 'unexpected',
@@ -105,5 +106,94 @@ describe('TypeSafe client', () => {
       await cacheKey({ ...video, title: 'A new title' }),
     );
     expect(await cacheKey(video)).toBe(await cacheKey({ ...video }));
+  });
+  it('sends custom preferences as separate questions and validates their scores', async () => {
+    const preferences = {
+      hideTopics: 'Celebrity gossip',
+      keepTopics: 'History documentaries',
+    };
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        ...response,
+        answers: {
+          ...response.answers,
+          customHide: { type: 'noul', noul: 0.98 },
+          customKeep: { type: 'noul', noul: 0.1 },
+        },
+      }),
+    );
+    await expect(
+      Effect.runPromise(classifyVideo(video, 'key', preferences, fetcher)),
+    ).resolves.toMatchObject({
+      customHide: 0.98,
+      customKeep: 0.1,
+    });
+    const body = String(fetcher.mock.calls[0]![1]?.body);
+    expect(JSON.parse(body)).toMatchObject({
+      state: { title: video.title, channel: video.channel },
+      questions: {
+        customHide: {
+          type: 'noul',
+          criteria: { true: expect.stringContaining(preferences.hideTopics) },
+        },
+        customKeep: {
+          type: 'noul',
+          criteria: { true: expect.stringContaining(preferences.keepTopics) },
+        },
+      },
+    });
+    expect(body).not.toContain(video.id);
+  });
+  it.each([
+    { customHide: { type: 'noul', noul: 0.9 } },
+    {
+      customHide: { type: 'noul', noul: 0.9 },
+      customKeep: { type: 'noul', noul: -0.1 },
+    },
+  ])(
+    'rejects missing or invalid answers to custom questions',
+    async (answers) => {
+      const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+        Response.json({
+          ...response,
+          answers: { ...response.answers, ...answers },
+        }),
+      );
+      await expect(
+        Effect.runPromise(
+          classifyVideo(
+            video,
+            'key',
+            {
+              hideTopics: 'Gossip',
+              keepTopics: 'History',
+            },
+            fetcher,
+          ),
+        ),
+      ).rejects.toMatchObject({ code: 'invalid_response' });
+      expect(fetcher).toHaveBeenCalledTimes(1);
+    },
+  );
+  it('invalidates scores for either preference but reuses them for local policy changes', async () => {
+    const preferences = {
+      ...defaultSettings,
+      hideTopics: 'Gossip',
+      keepTopics: 'History',
+    };
+    const key = await cacheKey(video, preferences);
+    expect(key).not.toBe(
+      await cacheKey(video, { ...preferences, hideTopics: 'Crypto' }),
+    );
+    expect(key).not.toBe(
+      await cacheKey(video, { ...preferences, keepTopics: 'Science' }),
+    );
+    const localChanges = {
+      ...preferences,
+      hideTopics: '  Gossip\n',
+      sensitivity: 'strict',
+      builtInFilters: { ...defaultSettings.builtInFilters, doom: false },
+    };
+    expect(key).toBe(await cacheKey(video, localChanges));
   });
 });

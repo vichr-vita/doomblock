@@ -28,7 +28,7 @@ import {
   saveScores,
   updateSettings,
 } from '../../src/storage';
-import { defaultSettings } from '../../src/model';
+import { defaultSettings, PREFERENCE_LIMIT } from '../../src/model';
 
 const scores = { doom: 0.9, outrage: 0.2, curiosity: 0.1, clickbait: 0.8 };
 beforeEach(() => {
@@ -62,6 +62,55 @@ describe('local data', () => {
         ),
       ),
     ).resolves.toMatchObject({ hasKey: true });
+  });
+  it('loads old settings with default filters while preserving the key and corrections', async () => {
+    const legacy = Object.fromEntries(
+      Object.entries(defaultSettings).filter(
+        ([key]) =>
+          !['hideTopics', 'keepTopics', 'builtInFilters'].includes(key),
+      ),
+    );
+    const settings = {
+      ...legacy,
+      enabled: true,
+      consent: true,
+      overrides: { abcdefghijk: 'allow' },
+      allowedChannels: { '/@history': 'History' },
+    };
+    memory.data.config = { settings, apiKey: 'existing-key' };
+    expect(await Effect.runPromise(readSettings)).toEqual({
+      apiKey: 'existing-key',
+      settings: { ...defaultSettings, ...settings },
+    });
+    await Effect.runPromise(
+      updateSettings((current) => ({
+        ...current,
+        hideTopics: 'Gossip',
+        keepTopics: 'History',
+        builtInFilters: { ...current.builtInFilters, doom: false },
+      })),
+    );
+    expect(await Effect.runPromise(readSettings)).toMatchObject({
+      apiKey: 'existing-key',
+      settings: {
+        hideTopics: 'Gossip',
+        keepTopics: 'History',
+        builtInFilters: { doom: false },
+        overrides: settings.overrides,
+      },
+    });
+  });
+  it('rejects invalid stored preferences instead of silently resetting settings', async () => {
+    memory.data.config = {
+      settings: {
+        ...defaultSettings,
+        hideTopics: 'x'.repeat(PREFERENCE_LIMIT + 1),
+      },
+      apiKey: 'key',
+    };
+    await expect(Effect.runPromise(readSettings)).rejects.toMatchObject({
+      code: 'storage',
+    });
   });
   it('serializes concurrent corrections and cache writes without losing entries', async () => {
     await Promise.all(

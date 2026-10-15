@@ -17,7 +17,7 @@ export interface UiBridge {
   page(command: PageCommand): Promise<PageState | undefined>;
   override(video: Video, action: 'allow' | 'block'): Promise<void>;
   subscribe(listener: () => void): () => void;
-  openSettings(): void;
+  openSettings(section?: 'filters'): void;
 }
 
 export const extensionBridge: UiBridge = {
@@ -74,7 +74,11 @@ export const extensionBridge: UiBridge = {
     browser.storage.onChanged.addListener(onChange);
     return () => browser.storage.onChanged.removeListener(onChange);
   },
-  openSettings() {
-    void browser.runtime.openOptionsPage();
+  openSettings(section) {
+    if (section === 'filters')
+      void browser.tabs.create({
+        url: browser.runtime.getURL('/options.html') + '#filters',
+      });
+    else void browser.runtime.openOptionsPage();
   },
 };

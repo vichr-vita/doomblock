@@ -62,16 +62,39 @@ const stop = await startContent({
     return state;
   },
   async classify(video) {
+    const preferences = state.settings;
     calls.push(video.id);
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) =>
+      setTimeout(
+        resolve,
+        new URLSearchParams(location.search).has('slow') ? 500 : 100,
+      ),
+    );
     if (failure)
       throw new Error(
         'TypeSafe could not be reached. Check your connection, then try again.',
       );
     const doom = video.title.includes('FINISHED') ? 0.97 : 0.1;
+    const matches = (preference: string) =>
+      `${video.title} ${video.channel}`
+        .toLowerCase()
+        .includes(preference.trim().toLowerCase())
+        ? 0.98
+        : 0.1;
     return {
       status: 'scored',
-      scores: { doom, outrage: 0.1, curiosity: 0.1, clickbait: 0.2 },
+      scores: {
+        doom,
+        outrage: 0.1,
+        curiosity: 0.1,
+        clickbait: 0.2,
+        ...(preferences.hideTopics.trim()
+          ? { customHide: matches(preferences.hideTopics) }
+          : {}),
+        ...(preferences.keepTopics.trim()
+          ? { customKeep: matches(preferences.keepTopics) }
+          : {}),
+      },
     };
   },
   async override(video, action) {

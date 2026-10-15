@@ -2,6 +2,9 @@ import { useEffect, useState, type ReactNode } from 'react';
 import {
   categories,
   categoryNames,
+  defaultFilters,
+  PREFERENCE_LIMIT,
+  reasonNames,
   type PageState,
   type PublicState,
   type Settings,
@@ -215,10 +218,10 @@ function Popup({ state, save, bridge, onError }: PanelProps) {
             </div>
             <p className="hint">
               {settings.sensitivity === 'gentle'
-                ? 'Hide only the clearest manipulation.'
+                ? 'Hide only the clearest matches.'
                 : settings.sensitivity === 'strict'
-                  ? 'Hide subtler manipulation, too.'
-                  : 'Hide clear manipulation. Keep serious analysis.'}
+                  ? 'Hide subtler matches, too.'
+                  : 'Hide clear matches.'}
             </p>
           </section>
           <div className="rule">
@@ -230,6 +233,14 @@ function Popup({ state, save, bridge, onError }: PanelProps) {
                 </span>
               </div>
             ))}
+            {settings.hideTopics.trim() ? (
+              <div className="count-row">
+                <span>Your filters</span>
+                <span>
+                  {hidden.filter((item) => item.reason === 'custom').length}
+                </span>
+              </div>
+            ) : null}
             {hidden.some((item) => !item.reason) ? (
               <div className="count-row">
                 <span>Hidden by you</span>
@@ -237,6 +248,12 @@ function Popup({ state, save, bridge, onError }: PanelProps) {
               </div>
             ) : null}
           </div>
+          <button
+            className="text-button"
+            onClick={() => bridge.openSettings('filters')}
+          >
+            Edit your filters
+          </button>
           {unchecked.length ? (
             <section className="error">
               <h2>{unchecked.length} videos unchecked</h2>
@@ -273,7 +290,7 @@ function Popup({ state, save, bridge, onError }: PanelProps) {
               {hidden.map((item) => (
                 <article className="review-item" key={item.video.id}>
                   <p>
-                    {item.reason ? categoryNames[item.reason] : 'Hidden by you'}
+                    {item.reason ? reasonNames[item.reason] : 'Hidden by you'}
                   </p>
                   <details>
                     <summary>Inspect title</summary>
@@ -343,7 +360,7 @@ function SettingsPage({ state, save, bridge, onError }: PanelProps) {
     try {
       await save(draft, apiKey.trim() || undefined);
       setApiKey('');
-      setNotice('Settings saved. Open YouTube or reload an existing tab.');
+      setNotice('Settings saved. Filters apply to open YouTube tabs.');
     } catch {
       /* App displays the save error. */
     } finally {
@@ -365,9 +382,9 @@ function SettingsPage({ state, save, bridge, onError }: PanelProps) {
         <section className="section">
           <h2>TypeSafe API key</h2>
           <p>
-            Video titles and channel names go directly to TypeSafe for
-            classification. Your key, cached scores, and corrections stay in
-            this browser.
+            Video titles, channel names, and your filter preferences go directly
+            to TypeSafe for classification. Your key, cached scores, and
+            corrections stay in this browser.
           </p>
           <p className="hint">
             No thumbnails, video IDs, cookies, search terms, or watch history
@@ -406,7 +423,7 @@ function SettingsPage({ state, save, bridge, onError }: PanelProps) {
             locally, without encryption.
           </p>
           <Checkbox
-            label="I agree to send video titles and channel names to TypeSafe."
+            label="I agree to send video titles, channel names, and my filter preferences to TypeSafe."
             checked={draft.consent}
             onChange={(consent) =>
               change({ consent, enabled: consent ? draft.enabled : false })
@@ -418,6 +435,81 @@ function SettingsPage({ state, save, bridge, onError }: PanelProps) {
             disabled={!draft.consent || (!state.hasKey && !apiKey.trim())}
             onChange={(enabled) => change({ enabled })}
           />
+        </section>
+        <section className="section" id="filters">
+          <h2>Your filters</h2>
+          <label className="field-label" htmlFor="hide-topics">
+            Hide videos about
+          </label>
+          <textarea
+            id="hide-topics"
+            className="field"
+            rows={4}
+            value={draft.hideTopics}
+            maxLength={PREFERENCE_LIMIT}
+            placeholder={
+              'Celebrity gossip\nCrypto price predictions\nViolent crime'
+            }
+            aria-describedby="hide-topics-hint"
+            onChange={(event) => change({ hideTopics: event.target.value })}
+          />
+          <p className="hint" id="hide-topics-hint">
+            Use your own words. Add one preference per line.
+          </p>
+          <label className="field-label" htmlFor="keep-topics">
+            Keep exceptions
+          </label>
+          <textarea
+            id="keep-topics"
+            className="field"
+            rows={4}
+            value={draft.keepTopics}
+            maxLength={PREFERENCE_LIMIT}
+            placeholder={'Cybersecurity explainers\nHistorical documentaries'}
+            aria-describedby="keep-topics-hint"
+            onChange={(event) => change({ keepTopics: event.target.value })}
+          />
+          <p className="hint" id="keep-topics-hint">
+            These exceptions take priority over your hide topics and the
+            built-in filters. Saved video corrections and allowed channels still
+            take priority.
+          </p>
+          <fieldset className="filter-options">
+            <legend>Also hide</legend>
+            {categories.map((category) => (
+              <Checkbox
+                key={category}
+                label={categoryNames[category]}
+                checked={draft.builtInFilters[category]}
+                onChange={(enabled) =>
+                  change({
+                    builtInFilters: {
+                      ...draft.builtInFilters,
+                      [category]: enabled,
+                    },
+                  })
+                }
+              />
+            ))}
+          </fieldset>
+          <p className="hint">
+            Your preferences go to TypeSafe with video titles and channel names.
+            Decisions use only those details. Each field allows up to{' '}
+            {PREFERENCE_LIMIT.toLocaleString('en-US')} characters.
+          </p>
+          <button
+            className="text-button"
+            type="button"
+            onClick={() =>
+              change({
+                hideTopics: '',
+                keepTopics: '',
+                builtInFilters: defaultFilters,
+              })
+            }
+          >
+            Reset filters
+          </button>
         </section>
         <section className="section">
           <h2>Where to filter</h2>

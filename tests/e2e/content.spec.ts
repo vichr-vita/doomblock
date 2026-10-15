@@ -212,3 +212,89 @@ test('sensitivity uses existing scores without reclassification and dispose rest
   await expect(page.locator('[data-db-ui]')).toHaveCount(0);
   await expect(page.locator('#doom-card .preview')).toBeVisible();
 });
+
+test('custom preferences recheck open cards and keep exceptions override hide matches', async ({
+  page,
+}) => {
+  await openFixture(page);
+  await expect(page.locator('#history-card')).toHaveAttribute(
+    'data-db-state',
+    'allowed',
+  );
+  await page.evaluate(() =>
+    window.doomblockFixture.setSettings({ hideTopics: 'Roman' }),
+  );
+  await expect(page.locator('#history-card')).toHaveAttribute(
+    'data-db-state',
+    'blocked',
+  );
+  await expect(
+    page
+      .locator('#history-card')
+      .getByText('Doomblock hid a video · Your filters'),
+  ).toBeVisible();
+  await page.evaluate(() =>
+    window.doomblockFixture.setSettings({ keepTopics: 'History' }),
+  );
+  await expect(page.locator('#history-card')).toHaveAttribute(
+    'data-db-state',
+    'allowed',
+  );
+  await page.evaluate(() =>
+    window.doomblockFixture.setSettings({ hideTopics: '', keepTopics: '' }),
+  );
+  await expect(page.locator('#history-card')).toHaveAttribute(
+    'data-db-state',
+    'allowed',
+  );
+  await expect(page.locator('#doom-card')).toHaveAttribute(
+    'data-db-state',
+    'blocked',
+  );
+  const before = await page.evaluate(
+    () => window.doomblockFixture.calls.length,
+  );
+  await page.evaluate(() =>
+    window.doomblockFixture.setSettings({
+      builtInFilters: {
+        doom: false,
+        outrage: true,
+        curiosity: true,
+        clickbait: true,
+      },
+    }),
+  );
+  await expect(page.locator('#doom-card')).toHaveAttribute(
+    'data-db-state',
+    'allowed',
+  );
+  expect(await page.evaluate(() => window.doomblockFixture.calls.length)).toBe(
+    before,
+  );
+});
+
+test('discards results from preferences changed during a request', async ({
+  page,
+}) => {
+  await openFixture(page, '?slow');
+  await expect
+    .poll(() => page.evaluate(() => window.doomblockFixture.calls.length))
+    .toBe(2);
+  await page.evaluate(() =>
+    window.doomblockFixture.setSettings({ keepTopics: 'FINISHED' }),
+  );
+  await expect
+    .poll(() => page.evaluate(() => window.doomblockFixture.calls.length))
+    .toBe(4);
+  await expect(page.locator('#doom-card')).toHaveAttribute(
+    'data-db-state',
+    'allowed',
+  );
+  const snapshot = await page.evaluate(() =>
+    window.doomblockFixture.snapshot(),
+  );
+  expect(
+    snapshot.items.find((item) => item.video.id === 'abcdefghijk')?.scores
+      ?.customKeep,
+  ).toBe(0.98);
+});

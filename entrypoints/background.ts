@@ -17,7 +17,7 @@ import {
   saveScores,
   updateSettings,
 } from '../src/storage';
-import { localDecision } from '../src/policy';
+import { localDecision, preferencesKey, type Preferences } from '../src/policy';
 
 export default defineBackground(() => {
   const network = Semaphore.makeUnsafe(3);
@@ -27,9 +27,9 @@ export default defineBackground(() => {
   >();
   let cooldown: { until: number; error: FilterError } | undefined;
 
-  function scoresFor(video: Video, apiKey: string) {
+  function scoresFor(video: Video, apiKey: string, preferences: Preferences) {
     return Effect.gen(function* () {
-      const key = yield* Effect.promise(() => cacheKey(video));
+      const key = yield* Effect.promise(() => cacheKey(video, preferences));
       const cached = yield* cachedScores(key);
       if (cached) return cached;
       const existing = pending.get(key);
@@ -43,13 +43,14 @@ export default defineBackground(() => {
           if (
             !latest.settings.enabled ||
             !latest.settings.consent ||
-            latest.apiKey !== apiKey
+            latest.apiKey !== apiKey ||
+            preferencesKey(latest.settings) !== preferencesKey(preferences)
           ) {
             return yield* Effect.fail(
               new FilterError({ code: 'setup', retryable: false }),
             );
           }
-          const result = yield* classifyVideo(video, apiKey).pipe(
+          const result = yield* classifyVideo(video, apiKey, preferences).pipe(
             Effect.tapError((error) =>
               Effect.sync(() => {
                 cooldown = {
@@ -131,7 +132,7 @@ export default defineBackground(() => {
             ok: true,
             classification: {
               status: 'scored',
-              scores: yield* scoresFor(request.video, apiKey),
+              scores: yield* scoresFor(request.video, apiKey, settings),
             },
           };
         }

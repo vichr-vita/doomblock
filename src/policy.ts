@@ -1,6 +1,5 @@
 import {
   categories,
-  type Category,
   type Classification,
   type Scores,
   type Settings,
@@ -9,14 +8,29 @@ import {
 
 const thresholds = { gentle: 0.94, balanced: 0.85, strict: 0.7 } as const;
 
-/** Score thresholds stay local so changing sensitivity never needs a new API call. */
-export function blockReason(
-  scores: Scores,
-  sensitivity: Settings['sensitivity'],
-): Category | undefined {
+export type Preferences = Pick<Settings, 'hideTopics' | 'keepTopics'>;
+
+/** Only changes to classification instructions require fresh scores. */
+export function preferencesKey(settings: Preferences): string {
+  return JSON.stringify([
+    settings.hideTopics.trim(),
+    settings.keepTopics.trim(),
+  ]);
+}
+
+/** Keep exceptions precede hide rules; thresholds and built-in switches stay local. */
+export function blockReason(scores: Scores, settings: Settings) {
+  const threshold = thresholds[settings.sensitivity];
+  if (settings.keepTopics.trim() && (scores.customKeep ?? 0) >= threshold)
+    return undefined;
+  if (settings.hideTopics.trim() && (scores.customHide ?? 0) >= threshold)
+    return 'custom' as const;
   return [...categories]
     .sort((a, b) => scores[b] - scores[a])
-    .find((category) => scores[category] >= thresholds[sensitivity]);
+    .find(
+      (category) =>
+        settings.builtInFilters[category] && scores[category] >= threshold,
+    );
 }
 
 export function localDecision(
@@ -33,6 +47,11 @@ export function localDecision(
   ) {
     return { status: 'allowed' };
   }
+  if (
+    !settings.hideTopics.trim() &&
+    !categories.some((category) => settings.builtInFilters[category])
+  )
+    return { status: 'allowed' };
   return undefined;
 }
 

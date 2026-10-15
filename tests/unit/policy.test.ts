@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blockReason, isFilteredPage, localDecision } from '../../src/policy';
-import { defaultSettings } from '../../src/model';
+import { defaultSettings, categories } from '../../src/model';
 
 const settings = { ...defaultSettings, enabled: true, consent: true };
 const video = {
@@ -15,15 +15,105 @@ describe('negative engagement policy', () => {
     expect(
       blockReason(
         { doom: 0.2, outrage: 0.1, curiosity: 0.1, clickbait: 0.2 },
-        'balanced',
+        settings,
       ),
     ).toBeUndefined();
   });
   it('uses the strongest qualifying category and changes sensitivity locally', () => {
     const scores = { doom: 0.9, outrage: 0.8, curiosity: 0.2, clickbait: 0.3 };
-    expect(blockReason(scores, 'gentle')).toBeUndefined();
-    expect(blockReason(scores, 'balanced')).toBe('doom');
-    expect(blockReason({ ...scores, outrage: 0.95 }, 'strict')).toBe('outrage');
+    expect(
+      blockReason(scores, { ...settings, sensitivity: 'gentle' }),
+    ).toBeUndefined();
+    expect(blockReason(scores, settings)).toBe('doom');
+    expect(
+      blockReason(
+        { ...scores, outrage: 0.95 },
+        { ...settings, sensitivity: 'strict' },
+      ),
+    ).toBe('outrage');
+  });
+  it('lets keep exceptions override custom hide matches and built-in filters', () => {
+    const scores = {
+      doom: 0.99,
+      outrage: 0.95,
+      curiosity: 0.1,
+      clickbait: 0.1,
+      customHide: 0.98,
+      customKeep: 0.96,
+    };
+    const preferences = {
+      ...settings,
+      hideTopics: 'Crime',
+      keepTopics: 'History',
+    };
+    expect(blockReason(scores, preferences)).toBeUndefined();
+    expect(blockReason({ ...scores, customKeep: 0.1 }, preferences)).toBe(
+      'custom',
+    );
+    expect(blockReason(scores, { ...preferences, keepTopics: '' })).toBe(
+      'custom',
+    );
+    expect(
+      blockReason(scores, {
+        ...settings,
+        builtInFilters: { ...settings.builtInFilters, doom: false },
+      }),
+    ).toBe('outrage');
+  });
+  it('applies sensitivity to custom matches', () => {
+    const scores = {
+      doom: 0.1,
+      outrage: 0.1,
+      curiosity: 0.1,
+      clickbait: 0.1,
+      customHide: 0.9,
+    };
+    const preferences = { ...settings, hideTopics: 'Gossip' };
+    expect(blockReason(scores, preferences)).toBe('custom');
+    expect(
+      blockReason(scores, { ...preferences, sensitivity: 'gentle' }),
+    ).toBeUndefined();
+  });
+  it.each(categories)(
+    'can disable %s without disabling other categories',
+    (category) => {
+      const scores = {
+        doom: 0,
+        outrage: 0,
+        curiosity: 0,
+        clickbait: 0,
+        [category]: 1,
+      };
+      expect(blockReason(scores, settings)).toBe(category);
+      expect(
+        blockReason(scores, {
+          ...settings,
+          builtInFilters: { ...settings.builtInFilters, [category]: false },
+        }),
+      ).toBeUndefined();
+    },
+  );
+  it('skips classification when no hide filters are active while honoring video corrections', () => {
+    const preferences = {
+      ...settings,
+      builtInFilters: {
+        doom: false,
+        outrage: false,
+        curiosity: false,
+        clickbait: false,
+      },
+      keepTopics: 'History',
+    };
+    expect(localDecision(video, preferences)).toEqual({ status: 'allowed' });
+    expect(
+      localDecision(video, { ...preferences, hideTopics: 'Gossip' }),
+    ).toBeUndefined();
+    expect(
+      localDecision(video, {
+        ...preferences,
+        overrides: { [video.id]: 'block' },
+      }),
+    ).toEqual({ status: 'blocked' });
   });
   it('gives explicit video corrections priority over channel rules', () => {
     expect(

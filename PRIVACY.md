@@ -6,6 +6,8 @@ Doomblock is a self-contained extension. The project operates no server and rece
 
 After you save your TypeSafe API key, accept transmission, and enable filtering, the extension sends the titles and channel names of supported recommendations to TypeSafe. It authenticates those requests with your API key. Requests go directly to `https://api.typesafe.ai/v1/systemone` with cookies omitted and no referrer. Like any HTTPS service, TypeSafe also receives network connection information, including your IP address.
 
+If you save custom **Hide videos about** or **Keep exceptions** preferences, the extension includes that text in the classification questions sent to TypeSafe. Each field allows up to 2,000 characters. Clearing a field and saving stops sending its text in subsequent requests. Changing preferences triggers fresh checks of visible recommendations; requests already sent cannot be recalled.
+
 Video IDs, channel links, thumbnails, descriptions, cookies, search terms, account details, and watch history are not part of classification requests. The extension does not inspect deliberate search results, subscriptions, channel pages, or Shorts. There is no analytics, advertising, telemetry, or remote executable code.
 
 TypeSafe's processing and retention are governed by its [legal documents](https://docs.typesafe.ai/legal). The MIT license covers Doomblock's code, not TypeSafe's service.
@@ -13,7 +15,7 @@ TypeSafe's processing and retention are governed by its [legal documents](https:
 ## What stays in your browser
 
 - The API key, stored without encryption in extension-local browser storage.
-- Your filtering settings and transmission consent.
+- Your filtering settings and transmission consent. Custom preference text is stored locally and also sent to TypeSafe when classifying.
 - Allowed channel links and names, and video allow/block corrections.
 - Classification scores and hashed metadata keys. Cached scores expire after seven days and the cache holds at most 500 entries.
 
